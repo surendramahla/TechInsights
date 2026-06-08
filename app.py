@@ -33,6 +33,10 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_
 config_class = get_config()
 app.config.from_object(config_class)
 
+# Run config-specific initialization (e.g. ProductionConfig validates DATABASE_URL)
+if hasattr(config_class, 'init_app'):
+    config_class.init_app(app)
+
 # Ensure the upload directory exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -163,6 +167,15 @@ with app.app_context():
     # otherwise let Alembic migrations create the tables in production.
     if app.config.get('DEBUG') and 'sqlite' in app.config.get('SQLALCHEMY_DATABASE_URI', ''):
         db.create_all()
+    else:
+        # In production (or when PostgreSQL is used), run database migrations automatically on startup
+        try:
+            print("[Startup] Running database migrations...")
+            from flask_migrate import upgrade
+            upgrade()
+            print("[Startup] Database migrations completed successfully.")
+        except Exception as migration_err:
+            print(f"[Startup] Migration failed/skipped: {migration_err}")
 
     # ── Self-healing Database Migrations (Column & Index check) ──
     try:

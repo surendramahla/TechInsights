@@ -84,6 +84,27 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
     
+    # Force PostgreSQL in production. SQLite fallback is strictly prohibited.
+    # Render/Heroku provide DATABASE_URL as an environment variable.
+    _prod_db_url = os.environ.get('DATABASE_URL')
+    if _prod_db_url:
+        if _prod_db_url.startswith("postgres://"):
+            _prod_db_url = _prod_db_url.replace("postgres://", "postgresql://", 1)
+        SQLALCHEMY_DATABASE_URI = _prod_db_url
+    else:
+        # Defer the error until this config is actually used (not at import time)
+        SQLALCHEMY_DATABASE_URI = None
+    
+    @staticmethod
+    def init_app(app):
+        """Called when the app is configured. Validates DATABASE_URL is present."""
+        if not app.config.get('SQLALCHEMY_DATABASE_URI'):
+            raise ValueError(
+                "FATAL: DATABASE_URL environment variable is NOT set! "
+                "Production requires a PostgreSQL database. "
+                "Set DATABASE_URL in Render Dashboard > Environment."
+            )
+    
     # Force HTTPS cookie security settings in production
     # (If running on host over HTTP, modern browsers allow localhost cookies, 
     # but for local non-secure HTTP runs we dynamically lower to Lax/False if needed)
