@@ -21,7 +21,6 @@ def clean_text(html_content):
     return re.sub(r'\s+', ' ', text).strip().lower()
 
 def update_recommendation_cache(all_blogs):
-    global _rec_cache
     if not all_blogs:
         return
         
@@ -54,8 +53,6 @@ def get_recommendations(target_blog_id, all_blogs, top_n=4):
     """
     Get recommended blogs based on TF-IDF Cosine Similarity of content, titles, and tags.
     """
-    global _rec_cache
-    
     if not all_blogs or len(all_blogs) < 2:
         return []
         
