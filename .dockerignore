@@ -1,0 +1,41 @@
+# VCS
+.git
+.gitignore
+.github
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Python caching
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local database and configuration secrets
+.env
+instance/
+*.db
+*.sqlite3
+
+# IDEs and OS files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+.DS_Store
+Thumbs.db
+
+# Large upload media assets
+static/uploads/*
+!static/uploads/.gitkeep
+
+# Docker configs and compose
+Dockerfile
+docker-compose.yml
+.dockerignore

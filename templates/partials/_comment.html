@@ -1,0 +1,78 @@
+{# ─── Recursive macro for nested comments (extracted for DRY AJAX rendering) ─────────────────── #}
+{% macro render_comment(comment, liked_comments) %}
+<div class="comment-item" id="comment-{{ comment.id }}">
+    <div class="comment-avatar">
+        {% if comment.author.image_file != 'default.jpg' %}
+            {% if comment.author.image_file.startswith('http') %}
+            <img src="{{ comment.author.image_file }}" class="c-avatar" alt="{{ comment.author.username }}">
+            {% else %}
+            <img src="{{ url_for('uploaded_file', filename=comment.author.image_file) }}" class="c-avatar" alt="{{ comment.author.username }}">
+            {% endif %}
+        {% else %}
+        <div class="c-avatar-placeholder">{{ comment.author.username[0].upper() }}</div>
+        {% endif %}
+    </div>
+    <div class="comment-body">
+        <div class="comment-header">
+            <a href="{{ url_for('user_profile', username=comment.author.username) }}"
+               class="comment-author">{{ comment.author.username }}</a>
+            <span class="comment-time relative-time" data-timestamp="{{ comment.date_posted.isoformat() }}Z">{{ comment.date_posted.strftime('%b %d, %Y · %H:%M') }}</span>
+            {% if comment.author == current_user or current_user.is_admin %}
+            <div class="comment-owner-actions">
+                <button class="btn-text edit-comment-btn"
+                        data-comment-id="{{ comment.id }}"
+                        data-content="{{ comment.content }}">
+                    <i class="fas fa-pen"></i>
+                </button>
+                <button class="btn-text btn-text-danger delete-comment-btn"
+                        data-comment-id="{{ comment.id }}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            {% endif %}
+        </div>
+        <div class="comment-text" id="comment-text-{{ comment.id }}">{{ comment.content }}</div>
+        <!-- Edit form (hidden by default) -->
+        <div class="edit-comment-form" id="edit-form-{{ comment.id }}" style="display:none;">
+            <textarea class="form-control comment-textarea edit-textarea"
+                      id="edit-content-{{ comment.id }}">{{ comment.content }}</textarea>
+            <div class="edit-actions mt-1">
+                <button class="btn btn-primary btn-sm"
+                        onclick="submitEditComment({{ comment.id }})">Save</button>
+                <button class="btn btn-outline btn-sm"
+                        onclick="cancelEditComment({{ comment.id }})">Cancel</button>
+            </div>
+        </div>
+
+        <div class="comment-actions-row">
+            <!-- Like comment -->
+            {% if current_user.is_authenticated %}
+            <button class="comment-like-btn {% if comment.id in liked_comments %}liked{% endif %}"
+                    data-comment-id="{{ comment.id }}">
+                <i class="fas fa-heart"></i>
+                <span class="clc-{{ comment.id }}">{{ comment.comment_likes|length }}</span>
+            </button>
+            <!-- Reply -->
+            <button class="reply-btn btn-text"
+                    onclick="setReply({{ comment.id }}, '{{ comment.author.username }}')">
+                <i class="fas fa-reply"></i> Reply
+            </button>
+            {% else %}
+            <span class="comment-like-display">
+                <i class="fas fa-heart"></i> {{ comment.comment_likes|length }}
+            </span>
+            {% endif %}
+        </div>
+
+        <!-- Nested replies -->
+        {% set replies = comment.replies.all() %}
+        <div class="replies-thread">
+            {% if replies %}
+                {% for reply in replies %}
+                {{ render_comment(reply, liked_comments) }}
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endmacro %}

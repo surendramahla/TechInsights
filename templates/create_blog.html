@@ -1,71 +1,226 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="auth-wrapper mt-5">
-    <div class="auth-card" style="max-width: 800px;">
-        <h2 class="auth-title text-center">{{ legend }}</h2>
-        <form method="POST" action="">
+<div class="editor-page container">
+    <div class="editor-card">
+        <h2 class="editor-title">{{ legend }}</h2>
+
+        <form method="POST" action="" id="blog-form" enctype="multipart/form-data" novalidate>
             {{ form.hidden_tag() }}
-            <fieldset class="form-group">
-                <div class="form-field">
-                    {{ form.title.label(class="form-label") }}
-                    {% if form.title.errors %}
-                    {{ form.title(class="form-control is-invalid") }}
-                    <div class="invalid-feedback">
-                        {% for error in form.title.errors %}
-                        <span>{{ error }}</span>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    {{ form.title(class="form-control", placeholder="Enter blog title") }}
-                    {% endif %}
-                </div>
 
-                <div class="form-field" style="margin-top: 15px; margin-bottom: 15px;">
+            <!-- Title -->
+            <div class="form-field">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    {{ form.title.label(class="form-label mb-0") }}
+                    <button type="button" id="generate-title-btn" class="btn btn-outline btn-xs ai-btn" title="Write content first, then generate title!">
+                        <i class="fas fa-magic"></i> Generate Title
+                    </button>
+                </div>
+                {% if form.title.errors %}
+                    {{ form.title(class="form-control is-invalid", placeholder="Your article title...") }}
+                    <div class="invalid-feedback">{% for e in form.title.errors %}<span>{{ e }}</span>{% endfor %}</div>
+                {% else %}
+                    {{ form.title(class="form-control editor-title-input", id="blog-title-input", placeholder="Your article title...") }}
+                {% endif %}
+            </div>
+            
+            <!-- Cover Image -->
+            <div class="form-field">
+                {{ form.cover_image.label(class="form-label") }}
+                {{ form.cover_image(class="form-control", accept="image/*") }}
+                {% if form.cover_image.errors %}
+                <div class="invalid-feedback d-block">{% for e in form.cover_image.errors %}<span>{{ e }}</span>{% endfor %}</div>
+                {% endif %}
+                {% if blog and blog.cover_image and blog.cover_image != 'default_cover.jpg' %}
+                <div class="mt-2">
+                    <small class="text-muted">Current cover:</small><br>
+                    <img src="{{ blog.cover_image }}" style="max-height: 100px; border-radius: 8px;">
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Category & Tags row -->
+            <div class="editor-meta-row">
+                <div class="form-field flex-1">
                     {{ form.category.label(class="form-label") }}
+                    {{ form.category(class="form-control form-select") }}
                     {% if form.category.errors %}
-                    {{ form.category(class="form-control is-invalid") }}
-                    <div class="invalid-feedback">
-                        {% for error in form.category.errors %}
-                        <span>{{ error }}</span>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    {{ form.category(class="form-control") }}
+                    <div class="invalid-feedback d-block">{% for e in form.category.errors %}<span>{{ e }}</span>{% endfor %}</div>
                     {% endif %}
                 </div>
+                <div class="form-field flex-2">
+                    {{ form.tags.label(class="form-label") }}
+                    {{ form.tags(class="form-control", placeholder="python, flask, web (comma separated)") }}
+                    {% if form.tags.errors %}
+                    <div class="invalid-feedback d-block">{% for e in form.tags.errors %}<span>{{ e }}</span>{% endfor %}</div>
+                    {% endif %}
+                </div>
+            </div>
 
-                <div class="form-field">
-                    {{ form.content.label(class="form-label") }}
-                    {% if form.content.errors %}
-                    {{ form.content(class="form-control is-invalid", rows="8") }}
-                    <div class="invalid-feedback">
-                        {% for error in form.content.errors %}
-                        <span>{{ error }}</span>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    {{ form.content(class="form-control blog-textarea", placeholder="Write your blog content here...", rows="12") }}
-                    {% endif %}
+            <!-- Quill Rich Text Editor -->
+            <div class="form-field">
+                <label class="form-label">Content</label>
+                <!-- Quill toolbar container -->
+                <div id="quill-toolbar">
+                    <span class="ql-formats">
+                        <select class="ql-header">
+                            <option value="1">Heading 1</option>
+                            <option value="2">Heading 2</option>
+                            <option value="3">Heading 3</option>
+                            <option selected>Normal</option>
+                        </select>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-bold"></button>
+                        <button class="ql-italic"></button>
+                        <button class="ql-underline"></button>
+                        <button class="ql-strike"></button>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-blockquote"></button>
+                        <button class="ql-code-block"></button>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-list" value="ordered"></button>
+                        <button class="ql-list" value="bullet"></button>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-link"></button>
+                        <button class="ql-image" id="ql-image-btn"></button>
+                        <button class="ql-table" title="Insert Table"></button>
+                    </span>
+                    <span class="ql-formats">
+                        <select class="ql-color"></select>
+                        <select class="ql-background"></select>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-align" value=""></button>
+                        <button class="ql-align" value="center"></button>
+                        <button class="ql-align" value="right"></button>
+                    </span>
+                    <span class="ql-formats">
+                        <button class="ql-clean"></button>
+                    </span>
                 </div>
-            </fieldset>
-            <div class="form-submit text-center mt-4">
-                {{ form.submit(class="btn btn-primary btn-lg") }}
+                <!-- Quill editor body -->
+                <div id="quill-editor">{{ form.content.data|safe if form.content.data else '' }}</div>
+                <!-- Hidden field — value set by JS before submit -->
+                {{ form.content(id="content-hidden", style="display:none;") }}
+                {% if form.content.errors %}
+                <div class="invalid-feedback d-block">
+                    {% for e in form.content.errors %}<span>{{ e }}</span>{% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="editor-actions">
+                <button type="submit" class="btn btn-primary btn-lg" id="publish-btn">
+                    <i class="fas fa-paper-plane"></i>
+                    {% if legend == 'Edit Blog' %}Update Post{% else %}Publish Post{% endif %}
+                </button>
+                <a href="{{ url_for('home') }}" class="btn btn-outline btn-lg">Cancel</a>
             </div>
         </form>
     </div>
 </div>
-
-<!-- TinyMCE temporarily disabled for debugging -->
-<!--
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js"></script>
-<script>
-    tinymce.init({
-        selector: '.blog-textarea',
-        plugins: 'lists link image preview code',
-        toolbar: 'undo redo | styles | bold italic | alignleft aligncenter alignright alignjustify | outdent indent | numlist bullist | link',
-        height: 400
-    });
-</script>
--->
-
 {% endblock content %}
+
+{% block scripts %}
+<script>
+    // ─── Initialise Quill ────────────────────────────
+    const quill = new Quill('#quill-editor', {
+        theme: 'snow',
+        modules: {
+            syntax: true,
+            toolbar: {
+                container: '#quill-toolbar',
+                handlers: {
+                    'image': imageUploadHandler
+                }
+            },
+            table: true
+        },
+        placeholder: 'Write your amazing article here...',
+    });
+
+    // If editing, Quill may render raw HTML — ensure it's set properly
+    // (content is already rendered inside #quill-editor div above)
+
+    // ─── Image upload handler (server-side) ──────────
+    function imageUploadHandler() {
+        const input = document.createElement('input');
+        input.setAttribute('type', 'file');
+        input.setAttribute('accept', 'image/png,image/jpg,image/jpeg,image/gif,image/webp');
+        input.click();
+        input.onchange = async () => {
+            const file = input.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('image', file);
+            try {
+                const resp = await fetch('/upload_image', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content') }
+                });
+                const data = await resp.json();
+                if (data.url) {
+                    const range = quill.getSelection(true);
+                    quill.insertEmbed(range.index, 'image', data.url, Quill.sources.USER);
+                }
+            } catch (err) {
+                console.error('Image upload failed', err);
+            }
+        };
+    }
+
+    // ─── On form submit: copy Quill HTML into hidden field ───
+    document.getElementById('blog-form').addEventListener('submit', function (e) {
+        const content = quill.root.innerHTML;
+        if (content.trim() === '<p><br></p>' || content.trim() === '') {
+            e.preventDefault();
+            showToast('Content cannot be empty!', 'danger');
+            return;
+        }
+        document.getElementById('content-hidden').value = content;
+    });
+
+    // ─── AI Title Generator ────────────────────────────
+    const generateTitleBtn = document.getElementById('generate-title-btn');
+    if (generateTitleBtn) {
+        generateTitleBtn.addEventListener('click', async () => {
+            const content = quill.root.innerHTML;
+            if (!content || content.trim() === '<p><br></p>' || content.trim().length < 50) {
+                showToast('Please write some content first to generate a title!', 'warning');
+                return;
+            }
+            
+            const originalIcon = generateTitleBtn.innerHTML;
+            generateTitleBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Generating...';
+            generateTitleBtn.disabled = true;
+            
+            try {
+                const resp = await fetch('/api/blog/generate_title', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content') 
+                    },
+                    body: JSON.stringify({ content: content })
+                });
+                const data = await resp.json();
+                if (data.title) {
+                    document.getElementById('blog-title-input').value = data.title.replace(/["']/g, "");
+                    showToast('Title generated!', 'success');
+                } else {
+                    showToast('Could not generate title.', 'warning');
+                }
+            } catch (e) {
+                showToast('Error generating title.', 'danger');
+            } finally {
+                generateTitleBtn.innerHTML = originalIcon;
+                generateTitleBtn.disabled = false;
+            }
+        });
+    }
+</script>
+{% endblock scripts %}

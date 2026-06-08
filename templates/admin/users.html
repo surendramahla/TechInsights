@@ -1,0 +1,94 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}User Management{% endblock %}
+{% block content %}
+<div class="card p-4">
+    <div class="d-flex justify-content-between mb-4">
+        <form class="d-flex" method="GET" style="width: 300px;">
+            <input type="text" name="search" class="form-control me-2" placeholder="Search username or email..." value="{{ search }}">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i></button>
+        </form>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Email</th>
+                    <th>Joined</th>
+                    <th>Blogs</th>
+                    <th>Status</th>
+                    <th>Role</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users.items %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <img src="{{ url_for('uploaded_file', filename=user.image_file) }}" class="rounded-circle me-2" width="30" height="30" style="object-fit:cover;">
+                            <span style="font-weight: 500;">{{ user.username }}</span>
+                        </div>
+                    </td>
+                    <td class="text-muted">{{ user.email }}</td>
+                    <td class="text-muted">{{ user.date_joined.strftime('%Y-%m-%d') }}</td>
+                    <td>{{ user.blogs|length }}</td>
+                    <td>
+                        {% if user.is_banned %}
+                            <span class="badge bg-danger text-white">Banned</span>
+                        {% else %}
+                            <span class="badge bg-success text-white">Active</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.is_admin %}
+                            <span class="badge bg-primary text-white">Admin</span>
+                        {% else %}
+                            <span class="badge bg-secondary text-white">User</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.id != current_user.id %}
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v"></i></button>
+                            <ul class="dropdown-menu shadow-sm border-0">
+                                <li><a class="dropdown-item {% if user.is_banned %}text-success{% else %}text-danger{% endif %}" href="#" onclick="sendAjax('{{ url_for('admin.toggle_ban', user_id=user.id) }}')">
+                                    <i class="fas fa-ban me-2"></i> {% if user.is_banned %}Unban User{% else %}Ban User{% endif %}
+                                </a></li>
+                                <li><a class="dropdown-item text-primary" href="#" onclick="sendAjax('{{ url_for('admin.toggle_role', user_id=user.id) }}')">
+                                    <i class="fas fa-user-shield me-2"></i> {% if user.is_admin %}Remove Admin{% else %}Promote to Admin{% endif %}
+                                </a></li>
+                            </ul>
+                        </div>
+                        {% else %}
+                        <span class="badge bg-light text-dark">You</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center py-4 text-muted">No users found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if users.pages > 1 %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-end mb-0">
+            {% for page_num in users.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                {% if page_num %}
+                    {% if users.page == page_num %}
+                        <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                    {% else %}
+                        <li class="page-item"><a class="page-link" href="{{ url_for('admin.users', page=page_num, search=search) }}">{{ page_num }}</a></li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

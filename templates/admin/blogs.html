@@ -1,0 +1,78 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Blog Moderation{% endblock %}
+{% block content %}
+<div class="card p-4">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Author</th>
+                    <th>Date</th>
+                    <th>Views</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for blog in blogs.items %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('blog_detail', blog_id=blog.id) }}" target="_blank" class="text-decoration-none" style="color:var(--text-color); font-weight:500;">
+                            {{ blog.title[:60] }}{% if blog.title|length > 60 %}...{% endif %}
+                        </a>
+                    </td>
+                    <td class="text-muted">{{ blog.author.username }}</td>
+                    <td class="text-muted">{{ blog.date_posted.strftime('%Y-%m-%d') }}</td>
+                    <td><span class="badge bg-secondary">{{ blog.views }}</span></td>
+                    <td>
+                        {% if blog.is_blocked %}
+                            <span class="badge bg-danger">Blocked</span>
+                        {% else %}
+                            <span class="badge bg-success">Visible</span>
+                        {% endif %}
+                        
+                        {% if blog.is_featured %}
+                            <span class="badge" style="background-color: #f59e0b; color: white;"><i class="fas fa-star"></i> Featured</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v"></i></button>
+                            <ul class="dropdown-menu shadow-sm border-0">
+                                <li><a class="dropdown-item {% if blog.is_blocked %}text-success{% else %}text-danger{% endif %}" href="#" onclick="sendAjax('{{ url_for('admin.toggle_block', blog_id=blog.id) }}')">
+                                    <i class="fas fa-ban me-2"></i> {% if blog.is_blocked %}Unblock Post{% else %}Block Post{% endif %}
+                                </a></li>
+                                <li><a class="dropdown-item" style="color: #f59e0b;" href="#" onclick="sendAjax('{{ url_for('admin.toggle_feature', blog_id=blog.id) }}')">
+                                    <i class="fas fa-star me-2"></i> {% if blog.is_featured %}Remove Featured{% else %}Mark Featured{% endif %}
+                                </a></li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" class="text-center py-4 text-muted">No blogs found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if blogs.pages > 1 %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-end mb-0">
+            {% for page_num in blogs.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                {% if page_num %}
+                    {% if blogs.page == page_num %}
+                        <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                    {% else %}
+                        <li class="page-item"><a class="page-link" href="{{ url_for('admin.blogs', page=page_num) }}">{{ page_num }}</a></li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

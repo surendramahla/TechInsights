@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: techinsights_web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+      - EVENTLET_NO_GREENDNS=yes
+    expose:
+      - "8000"
+    volumes:
+      - uploads_volume:/app/static/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  db:
+    image: postgres:15-alpine
+    container_name: techinsights_db
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres_secure_password}
+      - POSTGRES_DB=${POSTGRES_DB:-techinsights}
+    expose:
+      - "5432"
+    ports:
+      - "5432:5432" # Exposed to host for database management/queries, but secure in production
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: techinsights_redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: techinsights_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - uploads_volume:/app/static/uploads:ro
+      # Uncomment below in real VPS/server deployment to map SSL certificates from Certbot
+      # - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - web
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  uploads_volume:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge

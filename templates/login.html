@@ -1,52 +1,85 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="auth-wrapper">
+<div class="auth-page">
     <div class="auth-card">
-        <h2 class="auth-title">Welcome Back</h2>
-        <form method="POST" action="">
+        <div class="auth-header">
+            <i class="fas fa-bolt brand-icon fa-2x"></i>
+            <h2>Welcome Back</h2>
+            <p>Sign in to your TechInsights account</p>
+        </div>
+        <form method="POST" action="" class="auth-form">
             {{ form.hidden_tag() }}
-            <fieldset class="form-group">
-                <div class="form-field">
-                    {{ form.email.label(class="form-label") }}
-                    {% if form.email.errors %}
-                    {{ form.email(class="form-control is-invalid") }}
-                    <div class="invalid-feedback">
-                        {% for error in form.email.errors %}
-                        <span>{{ error }}</span>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    {{ form.email(class="form-control", placeholder="Enter email") }}
-                    {% endif %}
-                </div>
 
-                <div class="form-field">
-                    {{ form.password.label(class="form-label") }}
-                    {% if form.password.errors %}
-                    {{ form.password(class="form-control is-invalid") }}
-                    <div class="invalid-feedback">
-                        {% for error in form.password.errors %}
-                        <span>{{ error }}</span>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    {{ form.password(class="form-control", placeholder="Password") }}
-                    {% endif %}
-                </div>
+            <div class="form-field">
+                {{ form.email.label(class="form-label") }}
+                {% if form.email.errors %}
+                    {{ form.email(class="form-control is-invalid", placeholder="your@email.com") }}
+                    <div class="invalid-feedback">{% for e in form.email.errors %}{{ e }}{% endfor %}</div>
+                {% else %}
+                    {{ form.email(class="form-control", placeholder="your@email.com") }}
+                {% endif %}
+            </div>
 
-                <div class="form-check">
+            <div class="form-field position-relative">
+                {{ form.password.label(class="form-label") }}
+                <div class="password-wrapper">
+                {% if form.password.errors %}
+                    {{ form.password(class="form-control is-invalid", id="login-password", placeholder="Your password") }}
+                    <div class="invalid-feedback">{% for e in form.password.errors %}{{ e }}{% endfor %}</div>
+                {% else %}
+                    {{ form.password(class="form-control", id="login-password", placeholder="Your password") }}
+                {% endif %}
+                    <i class="fas fa-eye toggle-password" onclick="togglePassword('login-password', this)"></i>
+                </div>
+            </div>
+
+            <div class="form-field remember-row" style="display:flex; justify-content:space-between;">
+                <div>
                     {{ form.remember(class="form-check-input") }}
                     {{ form.remember.label(class="form-check-label") }}
                 </div>
-            </fieldset>
-            <div class="form-submit">
-                {{ form.submit(class="btn btn-primary btn-block") }}
+                <a href="{{ url_for('auth.reset_password_request') }}" style="font-size: 0.9rem; color: var(--primary-color);">Forgot Password?</a>
             </div>
+
+            {{ form.submit(class="btn btn-primary btn-block btn-lg mt-3", id="login-submit") }}
+            
+            <div class="auth-divider"><span>OR</span></div>
+            
+            <a href="{{ url_for('auth.google_login') }}" class="btn btn-outline btn-block mt-3" style="display:flex; align-items:center; justify-content:center; gap:10px;">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google" style="width:20px;">
+                Continue with Google
+            </a>
+
         </form>
-        <div class="auth-footer text-center mt-3">
-            <small class="text-muted">Need an account? <a class="auth-link" href="{{ url_for('register') }}">Sign Up
-                    Now</a></small>
-        </div>
+        <p class="auth-footer-text">
+            Don't have an account? <a href="{{ url_for('auth.register') }}">Sign Up Free</a>
+        </p>
     </div>
 </div>
+<script>
+function togglePassword(inputId, icon) {
+    const input = document.getElementById(inputId);
+    if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = "password";
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+document.querySelector('.auth-form').addEventListener('submit', function() {
+    const btn = document.getElementById('login-submit');
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Authenticating...';
+    btn.disabled = true;
+});
+</script>
+<style>
+.password-wrapper { position: relative; }
+.toggle-password { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: var(--text-muted); }
+.auth-divider { display: flex; align-items: center; text-align: center; margin: 1.5rem 0; color: var(--text-muted); }
+.auth-divider::before, .auth-divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--border-color); }
+.auth-divider span { padding: 0 10px; font-size: 0.85rem; font-weight: 500; }
+</style>
 {% endblock content %}

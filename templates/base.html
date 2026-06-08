@@ -1,73 +1,259 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if title %}{{ title }} - TechInsights{% else %}TechInsights - A Premium Blog{% endif %}</title>
+    {% block seo %}
+    <title>{% if title %}{{ title }} - TechInsights{% else %}TechInsights — Modern Tech Blog{% endif %}</title>
+    <meta name="description" content="TechInsights — A premium blogging platform for tech articles, tutorials, and insights.">
+    <!-- Canonical Link -->
+    <link rel="canonical" href="{{ request.base_url }}">
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.url }}">
+    <meta property="og:title" content="{% if title %}{{ title }}{% else %}TechInsights — Modern Tech Blog{% endif %}">
+    <meta property="og:description" content="TechInsights — A premium blogging platform for tech articles, tutorials, and insights.">
+    <meta property="og:image" content="{{ url_for('static', filename='images/default_cover.jpg', _external=True) }}">
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="{{ request.url }}">
+    <meta property="twitter:title" content="{% if title %}{{ title }}{% else %}TechInsights — Modern Tech Blog{% endif %}">
+    <meta property="twitter:description" content="TechInsights — A premium blogging platform for tech articles, tutorials, and insights.">
+    <meta property="twitter:image" content="{{ url_for('static', filename='images/default_cover.jpg', _external=True) }}">
+    {% endblock %}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Custom CSS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <!-- Highlight.js CSS for Code Syntax Highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <!-- Quill Snow theme -->
+    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
+    <!-- Main CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
 </head>
 
 <body>
-    <header class="navbar">
-        <div class="container nav-container">
-            <a class="nav-brand" href="{{ url_for('home') }}">TechInsights</a>
+    <!-- ═══════════════════ NAVBAR ═══════════════════ -->
+    <header class="navbar" id="main-navbar">
+        <div class="nav-container">
+            <!-- Brand -->
+            <a class="nav-brand" href="{{ url_for('home') }}">
+                <i class="fas fa-bolt brand-icon"></i>TechInsights
+            </a>
+
+            <!-- Search -->
             <div class="search-bar">
                 <form action="{{ url_for('home') }}" method="GET" class="search-form">
-                    <input type="text" name="q" placeholder="Search..."
-                        value="{{ search_query if search_query else '' }}" class="search-input">
-                    <button type="submit" class="search-btn"><i class="fas fa-search"></i></button>
+                    <input type="text" id="search-input" name="q"
+                           placeholder="Search articles..."
+                           value="{{ search_query if search_query else '' }}"
+                           class="search-input" autocomplete="off">
+                    <button type="submit" class="search-btn" aria-label="Search">
+                        <i class="fas fa-search"></i>
+                    </button>
                 </form>
             </div>
-            <nav class="nav-links">
-                <a class="nav-item" href="{{ url_for('home') }}">Home</a>
+
+            <!-- Nav Links -->
+            <nav class="nav-links" id="nav-links">
+                <a class="nav-item" href="{{ url_for('home') }}">
+                    <i class="fas fa-home"></i> Home
+                </a>
                 {% if current_user.is_authenticated %}
-                <a class="nav-item" href="{{ url_for('create_blog') }}">New Post</a>
-                <a class="nav-item" href="{{ url_for('dashboard') }}">Dashboard</a>
-                <a class="nav-item" href="{{ url_for('profile') }}">Profile</a>
-                {% if current_user.is_admin %}
-                <a class="nav-item admin-link" href="{{ url_for('admin_dashboard') }}">Admin Pnl</a>
-                {% endif %}
-                <a class="nav-item" href="{{ url_for('logout') }}">Logout</a>
+                <a class="nav-item btn-write" href="{{ url_for('create_blog') }}">
+                    <i class="fas fa-pen-nib"></i> Write
+                </a>
+                <a class="nav-item" href="{{ url_for('saved_posts') }}">
+                    <i class="fas fa-bookmark"></i> Saved
+                </a>
+                <a class="nav-item" href="{{ url_for('dashboard') }}">
+                    <i class="fas fa-th-large"></i> Dashboard
+                </a>
+                <a class="nav-item" href="{{ url_for('media.media_manager') }}">
+                    <i class="fas fa-images"></i> Media
+                </a>
+                <!-- Notification Bell -->
+                <div class="notification-dropdown" style="position:relative; display:inline-block;">
+                    <button class="nav-item" id="notif-btn" aria-label="Notifications" style="position:relative; background:none; border:none; cursor:pointer;">
+                        <i class="fas fa-bell"></i>
+                        <span class="badge" id="notif-badge" style="display:none; position:absolute; top:-2px; right:-8px; background:#e74c3c; color:white; border-radius:50%; padding:2px 5px; font-size:10px; font-weight:bold;">0</span>
+                    </button>
+                    <div class="dropdown-menu" id="notif-menu" style="width: 320px; max-height: 400px; overflow-y:auto; right:0; left:auto; display:none; position:absolute; top:40px; box-shadow:0 4px 12px rgba(0,0,0,0.1); border-radius:8px; z-index:1000; background:var(--bg-card);">
+                        <div class="dropdown-header" style="display:flex; justify-content:space-between; align-items:center; padding:10px 15px;">
+                            <strong>Notifications</strong>
+                            <a href="#" id="mark-all-read" style="font-size:12px; color:var(--text-muted); text-decoration:none;">Mark all read</a>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <div id="notif-list" style="padding:0;">
+                            <!-- Notifications go here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Toggle -->
+                <button class="nav-item" id="chat-toggle-btn" aria-label="Chat" onclick="toggleChatSidebar()" style="background:none; border:none; cursor:pointer;">
+                    <i class="fas fa-comment-dots"></i>
+                </button>
+
+                <!-- Avatar Dropdown -->
+                <div class="avatar-dropdown">
+                    <button class="avatar-btn" id="avatar-btn" aria-label="User menu">
+                        {% if current_user.image_file != 'default.jpg' %}
+                        {% if current_user.image_file.startswith('http') %}
+                        <img src="{{ current_user.image_file }}" alt="{{ current_user.username }}" class="avatar-img">
+                        {% else %}
+                        <img src="{{ url_for('uploaded_file', filename=current_user.image_file) }}" alt="{{ current_user.username }}" class="avatar-img">
+                        {% endif %}
+                        {% else %}
+                        <div class="avatar-placeholder">{{ current_user.username[0].upper() }}</div>
+                        {% endif %}
+                    </button>
+                    <div class="dropdown-menu" id="dropdown-menu">
+                        <div class="dropdown-header">
+                            <span class="dropdown-username">{{ current_user.username }}</span>
+                            <span class="dropdown-email">{{ current_user.email }}</span>
+                        </div>
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item" href="{{ url_for('user_profile', username=current_user.username) }}">
+                            <i class="fas fa-user"></i> My Profile
+                        </a>
+                        <a class="dropdown-item" href="{{ url_for('profile') }}">
+                            <i class="fas fa-cog"></i> Settings
+                        </a>
+                        {% if current_user.is_admin %}
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item admin-item" href="{{ url_for('admin.dashboard') }}">
+                            <i class="fas fa-shield-alt"></i> Admin Panel
+                        </a>
+                        {% endif %}
+                        <div class="dropdown-divider"></div>
+                        <a class="dropdown-item logout-item" href="{{ url_for('auth.logout') }}">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </div>
+                </div>
                 {% else %}
-                <a class="nav-item" href="{{ url_for('login') }}">Login</a>
-                <a class="nav-item btn-primary btn-sm" href="{{ url_for('register') }}">Sign Up</a>
+                <a class="nav-item" href="{{ url_for('auth.login') }}">Login</a>
+                <a class="nav-item btn-signup" href="{{ url_for('auth.register') }}">Get Started</a>
                 {% endif %}
+
+                <!-- Dark mode toggle -->
+                <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+                    <i class="fas fa-moon" id="theme-icon"></i>
+                </button>
             </nav>
-            <div class="mobile-menu-toggle">
-                <i class="fas fa-bars"></i>
-            </div>
+
+            <!-- Mobile hamburger -->
+            <button class="mobile-menu-toggle" id="mobile-toggle" aria-label="Toggle navigation">
+                <span></span><span></span><span></span>
+            </button>
         </div>
     </header>
 
-    <main class="container main-content">
-        <div class="flash-messages">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-            {% for category, message in messages %}
-            <div class="alert alert-{{ category }}">
-                {{ message }}
+    <!-- ═══════════════════ TOAST CONTAINER ═══════════════════ -->
+    <div class="toast-container" id="toast-container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="toast toast-{{ category }}" role="alert">
+            <div class="toast-icon">
+                {% if category == 'success' %}<i class="fas fa-check-circle"></i>
+                {% elif category == 'danger' %}<i class="fas fa-times-circle"></i>
+                {% elif category == 'warning' %}<i class="fas fa-exclamation-triangle"></i>
+                {% else %}<i class="fas fa-info-circle"></i>{% endif %}
             </div>
-            {% endfor %}
-            {% endif %}
-            {% endwith %}
+            <div class="toast-body">{{ message }}</div>
+            <button class="toast-close" onclick="this.parentElement.remove()" aria-label="Close">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- ═══════════════════ MAIN CONTENT ═══════════════════ -->
+    <main class="main-content">
         {% block content %}{% endblock %}
     </main>
 
+    <!-- ═══════════════════ FOOTER ═══════════════════ -->
     <footer class="footer">
-        <div class="container text-center">
-            <p>&copy; 2026 TechInsights Blog. All Rights Reserved.</p>
+        <div class="footer-container">
+            <div class="footer-brand">
+                <a class="nav-brand" href="{{ url_for('home') }}">
+                    <i class="fas fa-bolt brand-icon"></i>TechInsights
+                </a>
+                <p>A premium platform for tech writers and readers.</p>
+            </div>
+            <div class="footer-links">
+                <div class="footer-col">
+                    <h4>Explore</h4>
+                    <a href="{{ url_for('home') }}">Home</a>
+                    {% for cat in ['Technology','Education','Lifestyle'] %}
+                    <a href="{{ url_for('home', cat=loop.index) }}">{{ cat }}</a>
+                    {% endfor %}
+                </div>
+                <div class="footer-col">
+                    <h4>Account</h4>
+                    {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                    <a href="{{ url_for('profile') }}">Settings</a>
+                    <a href="{{ url_for('saved_posts') }}">Saved Posts</a>
+                    {% else %}
+                    <a href="{{ url_for('auth.login') }}">Login</a>
+                    <a href="{{ url_for('auth.register') }}">Sign Up</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 TechInsights. Built with <i class="fas fa-heart" style="color:#e74c3c;"></i> and Flask.</p>
         </div>
     </footer>
 
-    <!-- Custom JS -->
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
-</body>
+    <!-- ═══════════════════ LIVE CHAT POPUP ═══════════════════ -->
+    {% if current_user.is_authenticated %}
+    <div id="chat-popup" class="chat-popup">
+        <div class="chat-header">
+            <strong><i class="fas fa-comment-alt"></i> Messaging</strong>
+            <button onclick="toggleChatSidebar()" class="chat-close-btn"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="chat-body" id="chat-conversations-list">
+            <!-- Conversations loaded here -->
+        </div>
+        <div class="chat-window" id="chat-window" style="display:none;">
+            <div class="chat-window-header">
+                <button onclick="closeChatWindow()" class="chat-back-btn"><i class="fas fa-arrow-left"></i></button>
+                <span id="chat-active-user">User</span>
+            </div>
+            <div class="chat-messages" id="chat-messages-container">
+                <!-- Messages -->
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off">
+                <button id="chat-send-btn"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
+    <!-- ═══════════════════ SCRIPTS ═══════════════════ -->
+    <!-- Highlight.js JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- Quill 2.0.2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    {% if current_user.is_authenticated %}
+    <script>const currentUserId = Number("{{ current_user.id }}");</script>
+    <script src="{{ url_for('static', filename='js/realtime.js') }}"></script>
+    {% endif %}
+    {% block scripts %}{% endblock %}
+</body>
 </html>

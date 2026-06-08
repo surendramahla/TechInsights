@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-header">
+            <i class="fas fa-lock brand-icon fa-2x"></i>
+            <h2>Reset Password</h2>
+            <p>Enter your email to receive a reset link</p>
+        </div>
+        <form method="POST" action="" class="auth-form">
+            {{ form.hidden_tag() }}
+
+            <div class="form-field">
+                {{ form.email.label(class="form-label") }}
+                {% if form.email.errors %}
+                    {{ form.email(class="form-control is-invalid", placeholder="your@email.com") }}
+                    <div class="invalid-feedback">{% for e in form.email.errors %}{{ e }}{% endfor %}</div>
+                {% else %}
+                    {{ form.email(class="form-control", placeholder="your@email.com") }}
+                {% endif %}
+            </div>
+
+            {{ form.submit(class="btn btn-primary btn-block btn-lg mt-3") }}
+        </form>
+        <p class="auth-footer-text">
+            Remembered your password? <a href="{{ url_for('auth.login') }}">Login</a>
+        </p>
+    </div>
+</div>
+{% endblock content %}

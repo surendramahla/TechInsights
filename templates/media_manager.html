@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-images text-primary"></i> Media Management</h2>
+    </div>
+
+    <!-- Dropzone Area -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Upload New Media</h5>
+            <form action="{{ url_for('media.upload_media') }}" class="custom-dropzone" id="media-dropzone">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="dz-message" data-dz-message>
+                    <i class="fas fa-cloud-upload-alt fa-3x mb-2 text-muted"></i>
+                    <h4>Drag & Drop images here</h4>
+                    <p class="text-muted">or click to browse files (JPG, PNG, WEBP)</p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Media Library -->
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Your Media Library</h5>
+            <div class="row" id="media-library">
+                {% if media_items %}
+                    {% for media in media_items %}
+                    <div class="col-md-3 col-sm-4 col-6 mb-4" id="media-item-{{ media.id }}">
+                        <div class="card h-100 media-card">
+                            <img src="{{ media.file_url }}" class="card-img-top media-img" alt="{{ media.file_name }}" style="height: 150px; object-fit: cover;">
+                            <div class="card-body p-2 text-center">
+                                <small class="text-muted d-block text-truncate" title="{{ media.file_name }}">{{ media.file_name }}</small>
+                                <small class="text-muted d-block">{{ media.upload_date.strftime('%b %d, %Y') }}</small>
+                                <div class="mt-2 d-flex justify-content-center gap-2">
+                                    <button class="btn btn-sm btn-outline-primary copy-url-btn" data-url="{{ media.file_url }}" title="Copy URL">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger delete-media-btn" data-id="{{ media.id }}" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12 text-center text-muted py-4" id="empty-media-msg">
+                        <i class="fas fa-image fa-3x mb-3"></i>
+                        <p>No media found. Upload some images above!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dropzone JS & CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/dropzone.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/dropzone.min.js"></script>
+
+<style>
+    .media-card { transition: transform 0.2s; }
+    .media-card:hover { transform: translateY(-5px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
+    .custom-dropzone {
+        border: 2px dashed var(--primary);
+        border-radius: var(--radius);
+        background: var(--bg-card);
+        padding: 3rem 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+    }
+    .custom-dropzone:hover {
+        background: var(--primary-light);
+        border-color: var(--primary-dark);
+    }
+    .dz-preview {
+        display: none !important; /* hide default dropzone previews as we inject directly to the library grid */
+    }
+</style>
+
+<script>
+    // Initialize Dropzone
+    Dropzone.autoDiscover = false;
+    const csrfToken = "{{ csrf_token() }}";
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        const myDropzone = new Dropzone("#media-dropzone", {
+            url: "{{ url_for('media.upload_media') }}",
+            maxFilesize: 5, // MB
+            acceptedFiles: "image/jpeg,image/png,image/jpg,image/webp",
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            clickable: true,
+            init: function() {
+                this.on("success", function(file, response) {
+                    showToast('Image uploaded successfully!', 'success');
+                    
+                    // Remove empty message if present
+                    const emptyMsg = document.getElementById('empty-media-msg');
+                    if (emptyMsg) {
+                        emptyMsg.remove();
+                    }
+                    
+                    // Prepend new image to media library dynamically
+                    const mediaLibrary = document.getElementById('media-library');
+                    const colDiv = document.createElement('div');
+                    colDiv.className = "col-md-3 col-sm-4 col-6 mb-4";
+                    colDiv.id = `media-item-${response.id}`;
+                    
+                    const dateStr = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                    
+                    colDiv.innerHTML = `
+                        <div class="card h-100 media-card">
+                            <img src="${response.url}" class="card-img-top media-img" alt="${file.name}" style="height: 150px; object-fit: cover;">
+                            <div class="card-body p-2 text-center">
+                                <small class="text-muted d-block text-truncate" title="${file.name}">${file.name}</small>
+                                <small class="text-muted d-block">${dateStr}</small>
+                                <div class="mt-2 d-flex justify-content-center gap-2">
+                                    <button class="btn btn-sm btn-outline-primary copy-url-btn" data-url="${response.url}" title="Copy URL">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger delete-media-btn" data-id="${response.id}" title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    mediaLibrary.insertBefore(colDiv, mediaLibrary.firstChild);
+                    
+                    // Clean up dropzone preview
+                    this.removeFile(file);
+                });
+                
+                this.on("error", function(file, errorMessage) {
+                    const errorMsg = (typeof errorMessage === 'object' && errorMessage.error) ? errorMessage.error : errorMessage;
+                    showToast(errorMsg || 'Upload failed.', 'danger');
+                    this.removeFile(file);
+                });
+            }
+        });
+
+        // Event Delegation for Media Library Actions
+        const mediaLibrary = document.getElementById('media-library');
+        if (mediaLibrary) {
+            mediaLibrary.addEventListener('click', async function(e) {
+                // Copy URL button
+                const copyBtn = e.target.closest('.copy-url-btn');
+                if (copyBtn) {
+                    const url = copyBtn.getAttribute('data-url');
+                    navigator.clipboard.writeText(url).then(() => {
+                        showToast('URL copied to clipboard!', 'success');
+                    });
+                    return;
+                }
+                
+                // Delete button
+                const deleteBtn = e.target.closest('.delete-media-btn');
+                if (deleteBtn) {
+                    if (!confirm('Are you sure you want to delete this image?')) return;
+                    
+                    const mediaId = deleteBtn.getAttribute('data-id');
+                    deleteBtn.disabled = true;
+                    
+                    try {
+                        const res = await fetch(`/media/delete/${mediaId}`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': csrfToken
+                            }
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.status === 'success') {
+                                const item = document.getElementById(`media-item-${mediaId}`);
+                                if (item) item.remove();
+                                
+                                // Show empty state if no media left
+                                if (mediaLibrary.querySelectorAll('.media-card').length === 0) {
+                                    mediaLibrary.innerHTML = `
+                                        <div class="col-12 text-center text-muted py-4" id="empty-media-msg">
+                                            <i class="fas fa-image fa-3x mb-3"></i>
+                                            <p>No media found. Upload some images above!</p>
+                                        </div>
+                                    `;
+                                }
+                                
+                                showToast('Image deleted successfully.', 'success');
+                            } else {
+                                showToast(data.error || 'Failed to delete image.', 'danger');
+                                deleteBtn.disabled = false;
+                            }
+                        } else {
+                            showToast('Failed to delete image.', 'danger');
+                            deleteBtn.disabled = false;
+                        }
+                    } catch (err) {
+                        showToast('An error occurred.', 'danger');
+                        deleteBtn.disabled = false;
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

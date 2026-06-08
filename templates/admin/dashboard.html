@@ -1,0 +1,143 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Analytics Dashboard{% endblock %}
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stat-card stat-primary">
+            <div>
+                <p>Total Users</p>
+                <h3>{{ total_users }}</h3>
+            </div>
+            <i class="fas fa-users"></i>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-success">
+            <div>
+                <p>Total Blogs</p>
+                <h3>{{ total_blogs }}</h3>
+            </div>
+            <i class="fas fa-file-alt"></i>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card stat-warning">
+            <div>
+                <p>Total Views</p>
+                <h3>{{ total_views }}</h3>
+            </div>
+            <i class="fas fa-eye"></i>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #0ea5e9, #8b5cf6);">
+            <div>
+                <p>Active Users</p>
+                <h3>{{ active_users }}</h3>
+            </div>
+            <i class="fas fa-user-check"></i>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card p-4">
+            <h5 class="mb-4">Platform Growth (6 Months)</h5>
+            <canvas id="growthChart" height="120"></canvas>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-4 h-100">
+            <h5 class="mb-4">Trending Posts</h5>
+            <div class="list-group list-group-flush">
+                {% for blog in trending_blogs %}
+                <a href="{{ url_for('blog_detail', blog_id=blog.id) }}" target="_blank" class="list-group-item list-group-item-action bg-transparent border-color" style="color:var(--text-color); border-color: var(--border-color);">
+                    <div class="d-flex w-100 justify-content-between align-items-center">
+                        <h6 class="mb-1 text-truncate" style="max-width: 200px; font-weight:600;">{{ blog.title }}</h6>
+                        <span class="badge bg-primary rounded-pill"><i class="fas fa-eye"></i> {{ blog.views }}</span>
+                    </div>
+                    <small class="text-muted">By {{ blog.author.username }} • {{ blog.date_posted.strftime('%b %d, %Y') }}</small>
+                </a>
+                {% else %}
+                <p class="text-muted">No blogs found.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card p-4">
+            <h5 class="mb-4">Recent Moderation Activity</h5>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Action</th>
+                            <th>Target Type</th>
+                            <th>Details</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for activity in recent_activity %}
+                        <tr>
+                            <td><span class="badge bg-secondary">{{ activity.action }}</span></td>
+                            <td>{{ activity.target_type or '-' }}</td>
+                            <td>{{ activity.details or '-' }}</td>
+                            <td><small class="text-muted">{{ activity.timestamp.strftime('%Y-%m-%d %H:%M') }}</small></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-center text-muted">No recent activity.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        fetch("{{ url_for('admin.analytics_data') }}")
+        .then(res => res.json())
+        .then(data => {
+            const ctx = document.getElementById('growthChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Users',
+                        data: data.users,
+                        borderColor: '#4f46e5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }, {
+                        label: 'Blogs',
+                        data: data.blogs,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { 
+                        legend: { labels: { color: getComputedStyle(document.body).getPropertyValue('--text-color') } } 
+                    },
+                    scales: {
+                        x: { grid: { color: 'rgba(107, 114, 128, 0.1)' }, ticks: { color: '#6b7280' } },
+                        y: { grid: { color: 'rgba(107, 114, 128, 0.1)' }, ticks: { color: '#6b7280' }, beginAtZero: true }
+                    }
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

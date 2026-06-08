@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head><style>
+    body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    h2 { color: #a855f7; margin-top: 0; }
+    .btn { display: inline-block; padding: 12px 24px; background: linear-gradient(135deg, #a855f7, #ec4899); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }
+    p { color: #4b5563; line-height: 1.6; }
+</style></head>
+<body>
+    <div class="container">
+        <h2>Verify Your Email</h2>
+        <p>Welcome to TechInsights! We're excited to have you on board.</p>
+        <p>Please click the button below to verify your email address and activate your account. This link will expire in 24 hours.</p>
+        <a href="{{ verify_url }}" class="btn">Verify Account</a>
+        <p>If you did not create an account, no further action is required.</p>
+        <p>Thanks,<br>The TechInsights Team</p>
+    </div>
+</body>
+</html>

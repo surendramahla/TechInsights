@@ -1,66 +1,236 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="auth-wrapper mt-4">
-    <div class="auth-card" style="max-width: 600px;">
-        <div class="text-center mb-4">
-            <i class="fas fa-user-circle fa-5x text-primary" style="color: var(--primary-color);"></i>
-            <h2 class="mt-3">{{ current_user.username }}</h2>
-            <p class="text-muted">{{ current_user.email }}</p>
+<div class="profile-page container">
+
+    <!-- ══════ PROFILE HERO ══════ -->
+    <div class="profile-hero">
+        <div class="profile-avatar-wrap">
+            {% if current_user.image_file != 'default.jpg' %}
+                {% if current_user.image_file.startswith('http') %}
+                <img src="{{ current_user.image_file }}" class="profile-avatar" alt="{{ current_user.username }}">
+                {% else %}
+                <img src="{{ url_for('uploaded_file', filename=current_user.image_file) }}" class="profile-avatar" alt="{{ current_user.username }}">
+                {% endif %}
+            {% else %}
+            <div class="profile-avatar-placeholder">{{ current_user.username[0].upper() }}</div>
+            {% endif %}
             {% if current_user.is_admin %}
-            <span class="badge badge-admin">Administrator</span>
+            <span class="admin-badge"><i class="fas fa-shield-alt"></i> Admin</span>
             {% endif %}
         </div>
+        <div class="profile-info">
+            <h1>{{ current_user.username }}</h1>
+            <p class="profile-email"><i class="fas fa-envelope"></i> {{ current_user.email }}</p>
+            {% if current_user.bio %}
+            <p class="profile-bio">{{ current_user.bio }}</p>
+            {% endif %}
+            <div class="profile-stats-row">
+                <div class="pstat"><strong>{{ total_posts }}</strong><span>Posts</span></div>
+                <div class="pstat"><strong>{{ total_likes }}</strong><span>Likes Received</span></div>
+                <div class="pstat"><strong>{{ followers_count }}</strong><span>Followers</span></div>
+                <div class="pstat"><strong>{{ following_count }}</strong><span>Following</span></div>
+            </div>
+        </div>
+    </div>
 
-        <h3 class="auth-title mt-5">Update Profile Info</h3>
-        <form method="POST" action="">
-            {{ form.hidden_tag() }}
-            <fieldset class="form-group">
+    <div class="profile-layout">
+
+        <!-- Left: Settings Form -->
+        <div class="profile-settings-card">
+            <h3 class="card-section-title"><i class="fas fa-cog"></i> Account Settings</h3>
+            <form method="POST" action="" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+
+                <!-- Profile Picture -->
+                <div class="form-field avatar-upload-field">
+                    <label class="form-label">Profile Picture</label>
+                    <div class="avatar-upload-row">
+                        {% if current_user.image_file != 'default.jpg' %}
+                            {% if current_user.image_file.startswith('http') %}
+                            <img src="{{ current_user.image_file }}" class="avatar-preview" id="avatar-preview" alt="preview">
+                            {% else %}
+                            <img src="{{ url_for('uploaded_file', filename=current_user.image_file) }}" class="avatar-preview" id="avatar-preview" alt="preview">
+                            {% endif %}
+                        {% else %}
+                        <div class="avatar-preview avatar-preview-placeholder" id="avatar-preview">
+                            {{ current_user.username[0].upper() }}
+                        </div>
+                        {% endif %}
+                        <label class="upload-label btn btn-outline btn-sm">
+                            <i class="fas fa-camera"></i> Change Photo
+                            {{ form.picture(id="picture-input", style="display:none;") }}
+                        </label>
+                    </div>
+                    {% if form.picture.errors %}
+                    <div class="invalid-feedback d-block">{% for e in form.picture.errors %}{{ e }}{% endfor %}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Username -->
                 <div class="form-field">
                     {{ form.username.label(class="form-label") }}
                     {% if form.username.errors %}
-                    {{ form.username(class="form-control is-invalid") }}
-                    <div class="invalid-feedback">
-                        {% for error in form.username.errors %}
-                        <span>{{ error }}</span>
-                        {% endfor %}
-                    </div>
+                        {{ form.username(class="form-control is-invalid") }}
+                        <div class="invalid-feedback">{% for e in form.username.errors %}{{ e }}{% endfor %}</div>
                     {% else %}
-                    {{ form.username(class="form-control", placeholder="Enter username") }}
+                        {{ form.username(class="form-control") }}
                     {% endif %}
                 </div>
 
+                <!-- Email -->
                 <div class="form-field">
                     {{ form.email.label(class="form-label") }}
                     {% if form.email.errors %}
-                    {{ form.email(class="form-control is-invalid") }}
-                    <div class="invalid-feedback">
-                        {% for error in form.email.errors %}
-                        <span>{{ error }}</span>
-                        {% endfor %}
-                    </div>
+                        {{ form.email(class="form-control is-invalid") }}
+                        <div class="invalid-feedback">{% for e in form.email.errors %}{{ e }}{% endfor %}</div>
                     {% else %}
-                    {{ form.email(class="form-control", placeholder="Enter email") }}
+                        {{ form.email(class="form-control") }}
                     {% endif %}
                 </div>
 
+                <!-- Bio -->
                 <div class="form-field">
                     {{ form.bio.label(class="form-label") }}
-                    {% if form.bio.errors %}
-                    {{ form.bio(class="form-control is-invalid", rows="4") }}
-                    <div class="invalid-feedback">
-                        {% for error in form.bio.errors %}
-                        <span>{{ error }}</span>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    {{ form.bio(class="form-control", placeholder="Tell us about yourself...", rows="4") }}
-                    {% endif %}
+                    {{ form.bio(class="form-control", rows="4", placeholder="Tell the world about yourself...") }}
                 </div>
-            </fieldset>
-            <div class="form-submit mt-4">
-                {{ form.submit(class="btn btn-primary btn-block") }}
+
+                {{ form.submit(class="btn btn-primary btn-block mt-3") }}
+            </form>
+        </div>
+
+        <!-- Right Column - Column stack: Saved Posts + Recent Activity -->
+        <div class="profile-right-stack" style="display: flex; flex-direction: column; gap: 24px; flex: 1;">
+            <!-- Saved Posts Card -->
+            <div class="profile-saved-card">
+                <h3 class="card-section-title"><i class="fas fa-bookmark"></i> Saved Posts
+                    <a href="{{ url_for('saved_posts') }}" class="view-all-link">View All</a>
+                </h3>
+                {% if bookmarked_blogs %}
+                <ul class="saved-list">
+                    {% for b in bookmarked_blogs[:5] %}
+                    <li class="saved-item">
+                        <a href="{{ url_for('blog_detail', blog_id=b.id) }}" class="saved-title">
+                            {{ b.title|truncate(60) }}
+                        </a>
+                        <span class="saved-meta">{{ b.author.username }} · {{ b.read_time() }} min</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% if bookmarked_blogs|length > 5 %}
+                <a href="{{ url_for('saved_posts') }}" class="btn btn-outline btn-sm mt-2 btn-block">
+                    See {{ bookmarked_blogs|length - 5 }} More
+                </a>
+                {% endif %}
+                {% else %}
+                <div class="empty-mini">
+                    <i class="fas fa-bookmark fa-2x"></i>
+                    <p>No saved posts yet. Bookmark articles you love!</p>
+                </div>
+                {% endif %}
             </div>
-        </form>
+
+            <!-- Recent Activity Card -->
+            <div class="profile-activity-card" style="background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.75rem;">
+                <h3 class="card-section-title"><i class="fas fa-history"></i> Recent Activity</h3>
+                {% if recent_activities %}
+                <ul class="activity-timeline" style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 16px; position: relative;">
+                    {% for act in recent_activities %}
+                    <li class="activity-item" style="display: flex; gap: 12px; font-size: 0.88rem; align-items: flex-start;">
+                        <div class="activity-icon" style="width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--primary-light); color: var(--primary); flex-shrink: 0; font-size: 0.8rem;">
+                            {% if act.action == 'Created blog' %}
+                                <i class="fas fa-pen-nib"></i>
+                            {% elif act.action == 'Updated blog' %}
+                                <i class="fas fa-edit"></i>
+                            {% elif act.action == 'Deleted blog' %}
+                                <i class="fas fa-trash" style="color: var(--danger);"></i>
+                            {% elif act.action == 'Liked blog' %}
+                                <i class="fas fa-heart" style="color: var(--accent);"></i>
+                            {% elif act.action == 'Unliked blog' %}
+                                <i class="fas fa-heart-broken"></i>
+                            {% elif act.action == 'Bookmarked blog' %}
+                                <i class="fas fa-bookmark" style="color: var(--primary);"></i>
+                            {% elif act.action == 'Removed bookmark' %}
+                                <i class="far fa-bookmark"></i>
+                            {% elif act.action == 'Commented on blog' %}
+                                <i class="fas fa-comment"></i>
+                            {% elif act.action == 'Deleted comment' %}
+                                <i class="fas fa-comment-slash"></i>
+                            {% elif act.action == 'Followed user' %}
+                                <i class="fas fa-user-plus"></i>
+                            {% elif act.action == 'Unfollowed user' %}
+                                <i class="fas fa-user-minus"></i>
+                            {% else %}
+                                <i class="fas fa-cog"></i>
+                            {% endif %}
+                        </div>
+                        <div class="activity-details" style="flex: 1; line-height: 1.4;">
+                            <span class="activity-text" style="color: var(--text);">
+                                {% if act.action == 'Created blog' %}
+                                    Published <a href="{{ url_for('blog_detail', blog_id=act.target_id) }}" style="font-weight: 600;">{{ act.details }}</a>
+                                {% elif act.action == 'Updated blog' %}
+                                    Updated article <a href="{{ url_for('blog_detail', blog_id=act.target_id) }}" style="font-weight: 600;">{{ act.details }}</a>
+                                {% elif act.action == 'Deleted blog' %}
+                                    Deleted article <strong>{{ act.details }}</strong>
+                                {% elif act.action == 'Liked blog' %}
+                                    Liked article <a href="{{ url_for('blog_detail', blog_id=act.target_id) }}" style="font-weight: 600;">{{ act.details }}</a>
+                                {% elif act.action == 'Unliked blog' %}
+                                    Removed like from <a href="{{ url_for('blog_detail', blog_id=act.target_id) }}">{{ act.details }}</a>
+                                {% elif act.action == 'Bookmarked blog' %}
+                                    Saved article <a href="{{ url_for('blog_detail', blog_id=act.target_id) }}" style="font-weight: 600;">{{ act.details }}</a>
+                                {% elif act.action == 'Removed bookmark' %}
+                                    Removed bookmark from <a href="{{ url_for('blog_detail', blog_id=act.target_id) }}">{{ act.details }}</a>
+                                {% elif act.action == 'Commented on blog' %}
+                                    Commented: <span class="text-muted">"{{ act.details }}"</span> on <a href="{{ url_for('blog_detail', blog_id=act.target_id) }}" style="font-weight: 600;">post</a>
+                                {% elif act.action == 'Deleted comment' %}
+                                    Deleted a comment
+                                {% elif act.action == 'Followed user' %}
+                                    Started following <a href="{{ url_for('user_profile', username=act.details) }}" style="font-weight: 600;">{{ act.details }}</a>
+                                {% elif act.action == 'Unfollowed user' %}
+                                    Unfollowed <a href="{{ url_for('user_profile', username=act.details) }}">{{ act.details }}</a>
+                                {% else %}
+                                    {{ act.action }}: {{ act.details or '' }}
+                                {% endif %}
+                            </span>
+                            <span class="activity-time relative-time" data-timestamp="{{ act.timestamp.isoformat() }}Z" style="display: block; font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">
+                                {{ act.timestamp.strftime('%b %d, %Y · %H:%M') }}
+                            </span>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="empty-mini">
+                    <i class="fas fa-history fa-2x"></i>
+                    <p>No recent activities logged.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
     </div>
 </div>
 {% endblock content %}
+
+{% block scripts %}
+<script>
+// Live avatar preview when user selects a new picture
+document.getElementById('picture-input').addEventListener('change', function () {
+    const file = this.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        const preview = document.getElementById('avatar-preview');
+        if (preview.tagName === 'IMG') {
+            preview.src = e.target.result;
+        } else {
+            const img = document.createElement('img');
+            img.src = e.target.result;
+            img.className = 'avatar-preview';
+            img.id = 'avatar-preview';
+            preview.replaceWith(img);
+        }
+    };
+    reader.readAsDataURL(file);
+});
+</script>
+{% endblock scripts %}

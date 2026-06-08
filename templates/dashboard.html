@@ -1,34 +1,116 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="dashboard-header text-center mt-4 mb-4">
-    <h1>Your Dashboard</h1>
-    <p class="text-muted">Manage your blogs</p>
-</div>
+<div class="dashboard-page container">
 
-<div class="blog-grid mt-4">
-    {% for blog in blogs %}
-    <article class="blog-card">
-        <div class="blog-card-content">
-            <h2 class="blog-title"><a href="{{ url_for('blog_detail', blog_id=blog.id) }}">{{ blog.title }}</a></h2>
-            <div class="blog-meta">
-                <span class="post-date"><i class="fas fa-calendar-alt"></i> {{ blog.date_posted.strftime('%Y-%m-%d')
-                    }}</span>
-            </div>
-            <p class="blog-excerpt">{{ blog.content|striptags|truncate(150, true, '...') }}</p>
-            <div class="blog-actions mt-3">
-                <a href="{{ url_for('blog_detail', blog_id=blog.id) }}" class="btn btn-secondary btn-sm">View</a>
-                <form action="{{ url_for('delete_blog', blog_id=blog.id) }}" method="POST" style="display:inline;">
-                    <button type="submit" class="btn btn-danger btn-sm"
-                        onclick="return confirm('Are you sure you want to delete this blog?');">Delete</button>
-                </form>
+    <!-- Header Stats -->
+    <div class="dashboard-header">
+        <div>
+            <h1 class="dashboard-title">My Dashboard</h1>
+            <p class="text-muted">Manage and track your published articles.</p>
+        </div>
+        <a href="{{ url_for('create_blog') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> New Post
+        </a>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="dash-stats-row">
+        <div class="dash-stat-card">
+            <i class="fas fa-file-alt"></i>
+            <div>
+                <strong>{{ blogs|length }}</strong>
+                <span>Total Posts</span>
             </div>
         </div>
-    </article>
-    {% else %}
-    <div class="empty-state text-center w-100 mt-5">
-        <h3>You haven't written any blogs yet.</h3>
-        <a href="{{ url_for('create_blog') }}" class="btn btn-primary mt-3">Create First Blog</a>
+        <div class="dash-stat-card">
+            <i class="fas fa-eye"></i>
+            <div>
+                <strong>{{ blogs|sum(attribute='views') }}</strong>
+                <span>Total Views</span>
+            </div>
+        </div>
+        <div class="dash-stat-card">
+            <i class="fas fa-heart"></i>
+            <div>
+                <strong>{{ blogs|map(attribute='likes')|map('length')|sum }}</strong>
+                <span>Total Likes</span>
+            </div>
+        </div>
+        <div class="dash-stat-card">
+            <i class="fas fa-comments"></i>
+            <div>
+                <strong>{{ blogs|map(attribute='comments')|map('length')|sum }}</strong>
+                <span>Total Comments</span>
+            </div>
+        </div>
     </div>
-    {% endfor %}
+
+    <!-- Blog Table -->
+    {% if blogs %}
+    <div class="dash-table-card">
+        <table class="dash-table">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Date</th>
+                    <th>Views</th>
+                    <th>Likes</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for blog in blogs %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('blog_detail', blog_id=blog.id) }}" class="dash-blog-title">
+                            {{ blog.title|truncate(50) }}
+                        </a>
+                        <span class="dash-read-time">{{ blog.read_time() }} min read</span>
+                    </td>
+                    <td>
+                        {% if blog.category %}
+                        <span class="tag-chip cat-chip">{{ blog.category.name }}</span>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted small">{{ blog.date_posted.strftime('%b %d, %Y') }}</td>
+                    <td><i class="fas fa-eye text-muted"></i> {{ blog.views }}</td>
+                    <td><i class="fas fa-heart text-muted"></i> {{ blog.likes|length }}</td>
+                    <td>
+                        <div class="dash-actions">
+                            <a href="{{ url_for('edit_blog', blog_id=blog.id) }}"
+                               class="btn btn-outline btn-xs" title="Edit">
+                                <i class="fas fa-pen"></i>
+                            </a>
+                            <a href="{{ url_for('blog_detail', blog_id=blog.id) }}"
+                               class="btn btn-outline btn-xs" title="View">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <form action="{{ url_for('delete_blog', blog_id=blog.id) }}" method="POST"
+                                  style="display:inline;"
+                                  onsubmit="return confirm('Delete this post?');">
+                                {{ csrf_token_field() if csrf_token_field is defined }}
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-danger btn-xs" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state mt-5">
+        <i class="fas fa-pen-nib fa-3x"></i>
+        <h3>No articles yet</h3>
+        <p>Start sharing your knowledge with the world!</p>
+        <a href="{{ url_for('create_blog') }}" class="btn btn-primary mt-3">Write Your First Post</a>
+    </div>
+    {% endif %}
 </div>
 {% endblock content %}

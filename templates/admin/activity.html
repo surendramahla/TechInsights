@@ -1,0 +1,61 @@
+{% extends "admin/base_admin.html" %}
+{% block title %}Activity Log{% endblock %}
+{% block content %}
+<div class="card p-4">
+    <div class="timeline-wrapper">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Admin/User</th>
+                        <th>Action</th>
+                        <th>Target</th>
+                        <th>Details</th>
+                        <th>Time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for activity in activities.items %}
+                    <tr>
+                        <td>
+                            {% if activity.user %}
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ url_for('uploaded_file', filename=activity.user.image_file) }}" class="rounded-circle me-2" width="24" height="24">
+                                    <span style="font-weight: 500;">{{ activity.user.username }}</span>
+                                </div>
+                            {% else %}
+                                <span class="badge bg-dark">System</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge bg-primary">{{ activity.action }}</span></td>
+                        <td><span class="badge bg-light text-dark border">{{ activity.target_type or 'System' }} {{ '#' ~ activity.target_id if activity.target_id else '' }}</span></td>
+                        <td class="text-muted">{{ activity.details or '-' }}</td>
+                        <td class="text-muted"><small><i class="far fa-clock me-1"></i> {{ activity.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</small></td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="text-center py-4 text-muted">No activities found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    {% if activities.pages > 1 %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-end mb-0">
+            {% for page_num in activities.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                {% if page_num %}
+                    {% if activities.page == page_num %}
+                        <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                    {% else %}
+                        <li class="page-item"><a class="page-link" href="{{ url_for('admin.activity', page=page_num) }}">{{ page_num }}</a></li>
+                    {% endif %}
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

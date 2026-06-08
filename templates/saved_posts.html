@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-5">
+    <div class="section-heading-row">
+        <h1><i class="fas fa-bookmark"></i> Saved Posts</h1>
+        <p class="text-muted">Your bookmarked articles</p>
+    </div>
+
+    {% if bookmarked_blogs %}
+    <div class="blog-grid">
+        {% for blog in bookmarked_blogs %}
+        <article class="blog-card" data-id="{{ blog.id }}">
+            <div class="blog-card-cover-wrapper">
+                {% if blog.cover_image and blog.cover_image != 'default_cover.jpg' %}
+                    {% if 'image/upload/' in blog.cover_image %}
+                    <img src="{{ blog.cover_image.replace('image/upload/', 'image/upload/f_auto,q_auto,w_800/') }}" class="blog-card-cover-img" loading="lazy" alt="{{ blog.title }}">
+                    {% else %}
+                    <img src="{{ blog.cover_image }}" class="blog-card-cover-img" loading="lazy" alt="{{ blog.title }}">
+                    {% endif %}
+                {% else %}
+                <img src="{{ url_for('static', filename='images/default_cover.jpg') }}" class="blog-card-cover-img" loading="lazy" alt="Default Cover">
+                {% endif %}
+            </div>
+            <div class="blog-card-body">
+                <div class="blog-card-meta">
+                    <a class="card-author-link" href="{{ url_for('user_profile', username=blog.author.username) }}">
+                        {% if blog.author.image_file != 'default.jpg' %}
+                        <img src="{{ url_for('uploaded_file', filename=blog.author.image_file) }}"
+                             class="card-avatar" alt="{{ blog.author.username }}">
+                        {% else %}
+                        <div class="card-avatar-placeholder">{{ blog.author.username[0].upper() }}</div>
+                        {% endif %}
+                        <span>{{ blog.author.username }}</span>
+                    </a>
+                    <span class="dot">·</span>
+                    <span class="card-date relative-time" data-timestamp="{{ blog.date_posted.isoformat() }}Z">{{ blog.date_posted.strftime('%b %d, %Y') }}</span>
+                </div>
+                <h2 class="card-title">
+                    <a href="{{ url_for('blog_detail', blog_id=blog.id) }}">{{ blog.title }}</a>
+                </h2>
+                <p class="card-excerpt">{{ blog.excerpt(180) }}</p>
+                <div class="card-footer-row">
+                    <div class="card-tags">
+                        {% if blog.category %}<span class="tag-chip cat-chip">{{ blog.category.name }}</span>{% endif %}
+                    </div>
+                    <div class="card-stats">
+                        <span class="card-stat"><i class="fas fa-clock"></i> {{ blog.read_time() }} min</span>
+                        <span class="card-stat"><i class="fas fa-heart"></i> {{ blog.likes|length }}</span>
+                    </div>
+                </div>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state mt-5">
+        <i class="fas fa-bookmark fa-3x"></i>
+        <h3>No saved posts yet</h3>
+        <p>Bookmark articles on any post to find them here later.</p>
+        <a href="{{ url_for('home') }}" class="btn btn-primary mt-3">Browse Articles</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock content %}

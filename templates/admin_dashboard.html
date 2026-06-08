@@ -3,6 +3,39 @@
 <div class="admin-dashboard mt-4">
     <h1 class="text-center mb-4"><i class="fas fa-cogs"></i> Admin Control Panel</h1>
 
+    <!-- Stats Section -->
+    <div class="admin-stats-container mb-5">
+        <div class="stat-card">
+            <div class="stat-icon users-icon"><i class="fas fa-users"></i></div>
+            <div class="stat-info">
+                <h3>{{ stats.total_users }}</h3>
+                <p>Total Users</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon blogs-icon"><i class="fas fa-newspaper"></i></div>
+            <div class="stat-info">
+                <h3>{{ stats.total_blogs }}</h3>
+                <p>Total Blogs</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon categories-icon"><i class="fas fa-tags"></i></div>
+            <div class="stat-info">
+                <h3>{{ stats.total_categories }}</h3>
+                <p>Categories</p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon comments-icon"><i class="fas fa-comments"></i></div>
+            <div class="stat-info">
+                <h3>{{ stats.total_comments }}</h3>
+                <p>Comments</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Section -->
     <div class="admin-section mb-5">
         <h2 class="section-title"><i class="fas fa-users"></i> Manage Users</h2>
         <div class="table-responsive">
@@ -48,7 +81,8 @@
         </div>
     </div>
 
-    <div class="admin-section">
+    <!-- Blogs Section -->
+    <div class="admin-section mb-5">
         <h2 class="section-title"><i class="fas fa-newspaper"></i> Manage Blogs</h2>
         <div class="table-responsive">
             <table class="table admin-table">
@@ -82,5 +116,79 @@
             </table>
         </div>
     </div>
+
+    <!-- Categories Section -->
+    <div class="admin-section mb-5">
+        <h2 class="section-title"><i class="fas fa-tags"></i> Manage Categories</h2>
+        <div class="table-responsive">
+            <table class="table admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Blogs Count</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for category in categories %}
+                    <tr>
+                        <td>{{ category.id }}</td>
+                        <td>{{ category.name }}</td>
+                        <td>{{ category.blogs|length }}</td>
+                        <td>
+                            <form action="{{ url_for('admin_delete_category', category_id=category.id) }}" method="POST"
+                                style="display:inline;">
+                                <button type="submit" class="btn btn-danger btn-sm"
+                                    onclick="return confirm('Are you sure you want to delete this category?');"><i
+                                        class="fas fa-trash"></i> Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Comments Section -->
+    <div class="admin-section mb-5">
+        <h2 class="section-title"><i class="fas fa-comments"></i> Manage Comments</h2>
+        <div class="table-responsive">
+            <table class="table admin-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Content</th>
+                        <th>Author</th>
+                        <th>Blog</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for comment in comments %}
+                    <tr>
+                        <td>{{ comment.id }}</td>
+                        <td>{{ comment.content[:50] }}{% if comment.content|length > 50 %}...{% endif %}</td>
+                        <td>{{ comment.author.username }}</td>
+                        <td><a href="{{ url_for('blog_detail', blog_id=comment.blog.id) }}">{{ comment.blog.title[:30]
+                                }}{% if comment.blog.title|length > 30 %}...{% endif %}</a></td>
+                        <td>{{ comment.date_posted.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            <form action="{{ url_for('admin_delete_comment', comment_id=comment.id) }}" method="POST"
+                                style="display:inline;">
+                                <button type="submit" class="btn btn-danger btn-sm"
+                                    onclick="return confirm('Are you sure you want to delete this comment?');"><i
+                                        class="fas fa-trash"></i> Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
 </div>
 {% endblock content %}
