@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from flask import (Flask, render_template, url_for, flash, redirect,
                    request, abort, jsonify, send_from_directory, Response)
 from extensions import db, bcrypt, login_manager, csrf, migrate, cache, sess, cors, swagger

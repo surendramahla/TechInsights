@@ -19,10 +19,18 @@ class Config:
         
     # If DATABASE_URL references the internal Docker 'db' host but we are running on the host machine,
     # fallback to local SQLite site.db to avoid connection failures.
+    # In serverless environments like Vercel, fallback SQLite path is /tmp/site.db to avoid read-only system errors.
+    is_vercel = os.environ.get('VERCEL') == '1'
     if db_url and '@db' in db_url and not IS_DOCKER:
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///site.db'
+        if is_vercel:
+            SQLALCHEMY_DATABASE_URI = 'sqlite:////tmp/site.db'
+        else:
+            SQLALCHEMY_DATABASE_URI = 'sqlite:///site.db'
     else:
-        SQLALCHEMY_DATABASE_URI = db_url or 'sqlite:///site.db'
+        if not db_url and is_vercel:
+            SQLALCHEMY_DATABASE_URI = 'sqlite:////tmp/site.db'
+        else:
+            SQLALCHEMY_DATABASE_URI = db_url or 'sqlite:///site.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # File upload settings
@@ -92,8 +100,10 @@ class ProductionConfig(Config):
     
     # Production Redis Configurations for Cache
     # Only enable Redis session store, caching, and limiting if we are inside Docker,
-    # or if we are on the host but explicitly want to use a local Redis server.
-    if os.environ.get('REDIS_URL') and (IS_DOCKER or 'localhost' in os.environ.get('REDIS_URL', '')):
+    # or if we are on the host but explicitly want to use a local Redis server,
+    # or if we are running in serverless environments like Vercel.
+    is_vercel = os.environ.get('VERCEL') == '1'
+    if os.environ.get('REDIS_URL') and (IS_DOCKER or 'localhost' in os.environ.get('REDIS_URL', '') or is_vercel):
         CACHE_TYPE = 'RedisCache'
         CACHE_REDIS_URL = os.environ.get('REDIS_URL')
         

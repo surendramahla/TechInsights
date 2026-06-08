@@ -118,6 +118,16 @@ socket.on('new_notification', (data) => {
     loadNotifications();
 });
 
+// Initialize notifications on page load and setup fallback polling
+document.addEventListener('DOMContentLoaded', () => {
+    loadNotifications();
+    
+    // Polling fallback for notifications when socket is offline
+    if (!socket || typeof socket.connected === 'undefined' || !socket.connected) {
+        setInterval(loadNotifications, 30000);
+    }
+});
+
 
 // ── Chat System ─────────────────────────────────────
 const chatPopup = document.getElementById('chat-popup');
@@ -130,10 +140,12 @@ const chatActiveUser = document.getElementById('chat-active-user');
 
 let activeChatUserId = null;
 let typingTimeout = null;
+let chatPollInterval = null;
 
 function toggleChatSidebar() {
     if(chatPopup.style.display === 'flex') {
         chatPopup.style.display = 'none';
+        clearInterval(chatPollInterval);
     } else {
         chatPopup.style.display = 'flex';
         loadConversations();
@@ -144,6 +156,8 @@ function closeChatWindow() {
     chatWindow.style.display = 'none';
     chatList.style.display = 'flex';
     activeChatUserId = null;
+    clearInterval(chatPollInterval);
+    loadConversations();
 }
 
 async function loadConversations() {
@@ -194,6 +208,25 @@ async function openChat(userId, username) {
         const data = await res.json();
         renderMessages(data.messages);
     } catch(e) { console.error(e); }
+
+    // Fallback polling: if socket is mock or disconnected, poll messages every 4 seconds
+    clearInterval(chatPollInterval);
+    if (!socket || typeof socket.connected === 'undefined' || !socket.connected) {
+        chatPollInterval = setInterval(async () => {
+            if (activeChatUserId === userId && chatWindow.style.display === 'flex') {
+                try {
+                    const res = await fetch(`/realtime/chat/messages/${userId}`);
+                    const data = await res.json();
+                    const currentCount = chatMessages.querySelectorAll('.chat-message').length;
+                    if (data.messages.length !== currentCount) {
+                        renderMessages(data.messages);
+                    }
+                } catch(e) { console.error('Failed to poll messages', e); }
+            } else {
+                clearInterval(chatPollInterval);
+            }
+        }, 4000);
+    }
 }
 
 function renderMessages(messages) {
@@ -217,7 +250,7 @@ chatInput.addEventListener('keypress', (e) => {
     if(e.key === 'Enter') sendMessage();
     
     // Typing indicator
-    if(activeChatUserId) {
+    if(activeChatUserId && socket && typeof socket.connected !== 'undefined' && socket.connected) {
         socket.emit('typing', {receiver_id: activeChatUserId});
         clearTimeout(typingTimeout);
         typingTimeout = setTimeout(() => {
@@ -226,13 +259,40 @@ chatInput.addEventListener('keypress', (e) => {
     }
 });
 
-function sendMessage() {
+async function sendMessage() {
     const text = chatInput.value.trim();
     if(!text || !activeChatUserId) return;
-    socket.emit('send_message', {
-        receiver_id: activeChatUserId,
-        message: text
-    });
+    
+    if (socket && typeof socket.connected !== 'undefined' && socket.connected) {
+        socket.emit('send_message', {
+            receiver_id: activeChatUserId,
+            message: text
+        });
+    } else {
+        // Fallback to HTTP POST
+        try {
+            const res = await fetch('/realtime/chat/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || ''
+                },
+                body: JSON.stringify({
+                    receiver_id: activeChatUserId,
+                    message: text
+                })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                appendMessage(data.message);
+            } else {
+                showToast('Failed to send message', 'danger');
+            }
+        } catch (err) {
+            console.error('HTTP send message error:', err);
+            showToast('Failed to send message', 'danger');
+        }
+    }
     chatInput.value = '';
 }
 

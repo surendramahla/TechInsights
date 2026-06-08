@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, request, render_template
 from flask_login import login_required, current_user
 from models import db, Notification, Conversation, Message, User
 from sqlalchemy import or_
+from datetime import datetime
 
 realtime_bp = Blueprint('realtime', __name__, url_prefix='/realtime')
 
@@ -83,3 +84,54 @@ def get_messages(user_id):
         'content': m.message_content,
         'timestamp': m.timestamp.strftime('%H:%M')
     } for m in messages]})
+
+@realtime_bp.route('/chat/send', methods=['POST'])
+@login_required
+def send_message_http():
+    data = request.get_json() or {}
+    receiver_id = data.get('receiver_id')
+    content = data.get('message')
+    if not receiver_id or not content:
+        return jsonify({'error': 'Missing receiver_id or message'}), 400
+
+    # Find or create conversation
+    conv = Conversation.query.filter(
+        ((Conversation.user1_id == current_user.id) & (Conversation.user2_id == receiver_id)) |
+        ((Conversation.user1_id == receiver_id) & (Conversation.user2_id == current_user.id))
+    ).first()
+
+    if not conv:
+        conv = Conversation(user1_id=current_user.id, user2_id=receiver_id)
+        db.session.add(conv)
+        db.session.commit()
+
+    # Create message
+    msg = Message(
+        conversation_id=conv.id,
+        sender_id=current_user.id,
+        receiver_id=receiver_id,
+        message_content=content
+    )
+    conv.last_message_at = datetime.utcnow()
+    db.session.add(msg)
+    db.session.commit()
+
+    msg_data = {
+        'id': msg.id,
+        'sender_id': msg.sender_id,
+        'receiver_id': msg.receiver_id,
+        'content': msg.message_content,
+        'timestamp': msg.timestamp.strftime('%H:%M'),
+        'conversation_id': conv.id
+    }
+
+    # Try to emit socket event for real-time clients if socket is active
+    try:
+        from extensions import socketio
+        socketio.emit('receive_message', msg_data, room=f"user_{receiver_id}")
+        socketio.emit('receive_message', msg_data, room=f"user_{current_user.id}")
+    except Exception:
+        pass
+
+    return jsonify({'status': 'success', 'message': msg_data})
+
